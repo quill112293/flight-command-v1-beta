@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flight Command V1 Beta - Public
 // @namespace    torn.flight.command.v1beta
-// @version      1.0.6
+// @version      1.0.7
 // @description  Flight Command V1 Beta for Torn travel, overseas purchases, and trip tracking
 // @updateURL   https://raw.githubusercontent.com/quill112293/flight-command-v1-beta/main/Flight_Command_V1_Beta.user.js
 // @downloadURL https://raw.githubusercontent.com/quill112293/flight-command-v1-beta/main/Flight_Command_V1_Beta.user.js
@@ -14,7 +14,7 @@
 (function () {
     'use strict';
 
-    const VERSION = 'v1.0.6';
+    const VERSION = 'v1.0.7';
     const DISPLAY_LABEL = 'FLIGHT COMMAND V1 BETA · PUBLIC';
     const FLIGHT_STATE_KEY = 'fcp1-last-confirmed-flight';
     const GROUND_STATE_KEY = 'fcp1-ground-location-v1';
@@ -452,6 +452,7 @@
         ? savedSortMode
         : 'profit-high';
     let hideSoldOut = localStorage.getItem('fcp1-hide-sold-out') === 'true';
+    let hideNegativeProfit = localStorage.getItem('fcp1-hide-negative-profit') === 'true';
     let mexicoFeed = loadCachedMexicoFeed();
     let feedLoading = false;
     let feedError = '';
@@ -2278,6 +2279,7 @@
                         <button class="fcp1-mode-choice" data-sort-mode="quantity-low" type="button">LOWEST QUANTITY FIRST</button>
                     </div>
                     <button class="fcp1-sold-out-toggle" data-toggle-sold-out type="button"></button>
+                    <button class="fcp1-sold-out-toggle" data-toggle-negative-profit type="button"></button>
                     <button id="fcp1-copy-diagnostics" type="button">COPY DIAGNOSTIC DATA</button>
                 </div>
             </div>
@@ -2331,6 +2333,13 @@
         document.querySelector('#fcp1-filters-content [data-toggle-sold-out]').addEventListener('click', () => {
             hideSoldOut = !hideSoldOut;
             localStorage.setItem('fcp1-hide-sold-out', String(hideSoldOut));
+            mexicoRenderSignature = '';
+            renderMexicoItems(true);
+        });
+
+        document.querySelector('#fcp1-filters-content [data-toggle-negative-profit]').addEventListener('click', () => {
+            hideNegativeProfit = !hideNegativeProfit;
+            localStorage.setItem('fcp1-hide-negative-profit', String(hideNegativeProfit));
             mexicoRenderSignature = '';
             renderMexicoItems(true);
         });
@@ -4240,6 +4249,7 @@
             profitMode,
             sortMode,
             hideSoldOut,
+            hideNegativeProfit,
             highlightingEnabled,
             marketPriceLoading,
             marketPriceProgress.complete,
@@ -4254,7 +4264,10 @@
         const sortByQuantity = sortMode.startsWith('quantity-');
         const sortField = sortByQuantity ? 'quantity' : 'cost';
         const descending = sortMode.endsWith('-high');
-        const visibleItems = hideSoldOut ? items.filter(item => !item.soldOut) : items;
+        const visibleItems = items.filter(item =>
+            (!hideSoldOut || !item.soldOut)
+            && (!hideNegativeProfit || !Number.isFinite(selectedProfit(item)) || selectedProfit(item) >= 0)
+        );
         const sortedItems = [...visibleItems].sort((left, right) => {
             const leftValue = sortByProfit ? selectedProfit(left) : left[sortField];
             const rightValue = sortByProfit ? selectedProfit(right) : right[sortField];
@@ -4342,7 +4355,7 @@
 
         content.classList.toggle('fcp1-highlights-on', highlightingEnabled);
         content.innerHTML = `
-            <div class="fcp1-catalog-note">Complete Mexico catalog${hideSoldOut ? ' - sold-out items hidden' : ' - sold-out items visible'}<br>${escapeHtml(feedStatusText())}<br>${escapeHtml(priceStatusText())}<br>${travelCapacity ? `Travel capacity: ${travelCapacity.used}/${travelCapacity.total} used · ${travelCapacity.remaining} slots remaining` : 'Travel capacity: waiting for Torn capacity display'}</div>
+            <div class="fcp1-catalog-note">Complete Mexico catalog${hideSoldOut ? ' - sold-out items hidden' : ' - sold-out items visible'}${hideNegativeProfit ? ' - negative-profit items hidden' : ''}<br>${escapeHtml(feedStatusText())}<br>${escapeHtml(priceStatusText())}<br>${travelCapacity ? `Travel capacity: ${travelCapacity.used}/${travelCapacity.total} used · ${travelCapacity.remaining} slots remaining` : 'Travel capacity: waiting for Torn capacity display'}</div>
             <button id="fcp1-refresh-prices" class="fcp1-button" type="button" ${marketPriceLoading ? 'disabled' : ''}>REFRESH MARKET PRICES</button>
             ${cards}`;
 
@@ -4364,6 +4377,12 @@
         if (soldOutButton) {
             soldOutButton.classList.toggle('active', hideSoldOut);
             soldOutButton.textContent = `HIDE ALL SOLD OUT ITEMS: ${hideSoldOut ? 'ON' : 'OFF'}`;
+        }
+
+        const negativeProfitButton = filters.querySelector('[data-toggle-negative-profit]');
+        if (negativeProfitButton) {
+            negativeProfitButton.classList.toggle('active', hideNegativeProfit);
+            negativeProfitButton.textContent = `HIDE NEGATIVE PROFIT ITEMS: ${hideNegativeProfit ? 'ON' : 'OFF'}`;
         }
     }
 
