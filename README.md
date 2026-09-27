@@ -2,11 +2,12 @@
 
 A Torn userscript for travel planning, overseas purchase support, and trip tracking.
 
-## Public beta — version 1.0.6
+## Public beta — version 1.0.7
 
 - Public faction script with the regular travel, item, settings, and trip summary features.
 - Admin controls and Pilot Mode are kept in a separate private admin script.
 - Destinations: Mexico, Cayman Islands, Canada, Hawaii, United Kingdom, Argentina, Switzerland, Japan, China, United Arab Emirates, and South Africa.
+- Optional setting to hide items with negative profit, based on the selected profit mode.
 
 ## Install
 
